@@ -1,64 +1,33 @@
-require('dotenv').config();
-
-const { execSync } = require('child_process');
-
-const fakeRequest = require('supertest');
+const fs = require('fs');
+const pool = require('../lib/utils/pool');
+const request = require('supertest');
 const app = require('../lib/app');
-const client = require('../lib/client');
+const Route = require('../lib/models/route');
 
-describe('app routes', () => {
-  describe('routes', () => {
-    let token;
-  
-    beforeAll(async done => {
-      execSync('npm run setup-db');
-  
-      client.connect();
-  
-      const signInData = await fakeRequest(app)
-        .post('/auth/signup')
-        .send({
-          email: 'jon@user.com',
-          password: '1234'
-        });
-      
-      token = signInData.body.token;
-  
-      return done();
-    });
-  
-    afterAll(done => {
-      return client.end(done);
-    });
-
-  test('returns animals', async() => {
-
-    const expectation = [
-      {
-        'id': 1,
-        'name': 'bessie',
-        'coolfactor': 3,
-        'owner_id': 1
-      },
-      {
-        'id': 2,
-        'name': 'jumpy',
-        'coolfactor': 4,
-        'owner_id': 1
-      },
-      {
-        'id': 3,
-        'name': 'spot',
-        'coolfactor': 10,
-        'owner_id': 1
-      }
-    ];
-
-    const data = await fakeRequest(app)
-      .get('/animals')
-      .expect('Content-Type', /json/)
-      .expect(200);
-
-    expect(data.body).toEqual(expectation);
+describe('Route routes', () => {
+  beforeEach(() => {
+    return pool.query(fs.readFileSync('./sql/setup.sql', 'utf-8'));
   });
+
+  it('creates a route', () => {
+    return request(app)
+      .post('/api/v1/route')
+      .send({
+        location: 'Smith Rock',
+        name: 'Voyage of the Cowdog',
+        rating: '5.8+',
+        notes: 'Good warm-up.'
+      })
+      .then(res => {
+        expect(res.body).toEqual({
+          id: '1',
+          userId: '1',
+          location: 'Smith Rock',
+          name: 'Voyage of the Cowdog',
+          rating: '5.8+',
+          notes: 'Good warm-up.'
+        });
+      });
+  });
+
 });
